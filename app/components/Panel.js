@@ -6,6 +6,7 @@ import WatchedQueries from './WatchedQueries';
 import Mutations from './Mutations';
 import Explorer from './Explorer';
 import Inspector from './Inspector';
+import Network from './Network';
 import Apollo from './Images/Apollo';
 import GraphQL from './Images/GraphQL';
 import Store from './Images/Store';
@@ -26,12 +27,12 @@ export default class Panel extends Component {
       runQuery: undefined,
       runVariables: undefined,
       selectedRequestId: undefined,
-      automaticallyRunQuery: undefined
+      automaticallyRunQuery: undefined,
     };
 
     let backgroundPageConnection = chrome.runtime.connect({
       // sending tabId as name to make connection one-step process
-      name: chrome.devtools.inspectedWindow.tabId.toString()
+      name: chrome.devtools.inspectedWindow.tabId.toString(),
     });
 
     backgroundPageConnection.onMessage.addListener((logItem, sender) => {
@@ -39,39 +40,44 @@ export default class Panel extends Component {
 
       if (logItem.queries) {
         tabData = {
-          state: { queries: logItem.queries }
+          state: { queries: logItem.queries },
         };
       }
 
       if (logItem.mutations) {
         let mutations = logItem.mutations;
-        let mutationsArray = Object.keys(mutations).map(function (key, index) {
+        let mutationsArray = Object.keys(mutations).map(function(key, index) {
           return [key, mutations[key]];
         });
         // chose 10 arbitrary so we only display 10 mutations in log
         mutationsArray = mutationsArray.slice(
           mutationsArray.length - 10,
-          mutationsArray.length
+          mutationsArray.length,
         );
         mutations = {};
-        mutationsArray.forEach(function (m) {
+        mutationsArray.forEach(function(m) {
           mutations[m[0]] = m[1];
         });
 
         tabData = {
-          state: { mutations: logItem.mutations }
+          state: { mutations: logItem.mutations },
         };
       }
 
       if (logItem.inspector) {
-
         tabData = {
-          state: { inspector: logItem.inspector }
+          state: { inspector: logItem.inspector },
+        };
+      }
+
+      if (logItem.network) {
+        tabData = {
+          state: { network: logItem.network },
         };
       }
 
       this.setState({
-        tabData: tabData
+        tabData: tabData,
       });
     });
 
@@ -84,7 +90,6 @@ export default class Panel extends Component {
   }
 
   selectedApolloLog() {
-
     if (!this.state.tabData) {
       return {};
     }
@@ -98,7 +103,7 @@ export default class Panel extends Component {
       active: 'graphiql',
       runQuery: queryString,
       runVariables: variables ? JSON.stringify(variables, null, 2) : '',
-      automaticallyRunQuery
+      automaticallyRunQuery,
     });
   }
 
@@ -108,13 +113,13 @@ export default class Panel extends Component {
       // Don't leave this stuff around except when actively clicking the run
       // button.
       runQuery: undefined,
-      runVariables: undefined
+      runVariables: undefined,
     });
   }
 
   selectLogItem(id) {
     this.setState({
-      selectedRequestId: id
+      selectedRequestId: id,
     });
   }
 
@@ -125,15 +130,15 @@ export default class Panel extends Component {
     switch (active) {
       case 'queries':
         // XXX this won't work in the dev tools (probably does work now)
-        body =
-          selectedLog &&
-          <WatchedQueries state={selectedLog.state} onRun={this.onRun} />;
+        body = selectedLog && (
+          <WatchedQueries state={selectedLog.state} onRun={this.onRun} />
+        );
         break;
       case 'mutations':
         // XXX this won't work in the dev tools (probably does work now)
-        body =
-          selectedLog &&
-          <Mutations state={selectedLog.state} onRun={this.onRun} />;
+        body = selectedLog && (
+          <Mutations state={selectedLog.state} onRun={this.onRun} />
+        );
         break;
       case 'store':
         body = selectedLog && <Inspector state={selectedLog.state} />;
@@ -155,6 +160,8 @@ export default class Panel extends Component {
           />
         );
         break;
+      case 'network':
+        body = selectedLog && <Network data={selectedLog.state} />;
       default:
         break;
     }
@@ -164,7 +171,7 @@ export default class Panel extends Component {
         className={classnames(
           'apollo-client-panel',
           { 'in-window': !chrome.devtools },
-          chrome.devtools && chrome.devtools.panels.themeName
+          chrome.devtools && chrome.devtools.panels.themeName,
         )}
       >
         <Sidebar className="tabs" name="nav-tabs">
@@ -187,7 +194,7 @@ export default class Panel extends Component {
             <Queries />
             <div>Queries</div>
           </div>
-          {getMutationDefinition &&
+          {getMutationDefinition && (
             <div
               title="Watched mutations"
               className={classnames('tab', { active: active === 'mutations' })}
@@ -195,7 +202,8 @@ export default class Panel extends Component {
             >
               <Queries />
               <div>Mutations</div>
-            </div>}
+            </div>
+          )}
           <div
             title="Apollo client store"
             className={classnames('tab', { active: active === 'store' })}
@@ -203,6 +211,14 @@ export default class Panel extends Component {
           >
             <Store />
             <div>Store</div>
+          </div>
+          <div
+            title="Apollo Link Visualizer"
+            className={classnames('tab', { active: active === 'network' })}
+            onClick={() => this.switchPane('network')}
+          >
+            <Apollo />
+            <div>Network</div>
           </div>
         </Sidebar>
         {body}

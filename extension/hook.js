@@ -3,7 +3,7 @@ const version = (getManifest && getManifest().version) || 'electron-version';
 let passedApolloConnected = false;
 let contentScriptState = {
   activeTab: '',
-  data: ''
+  data: '',
 };
 
 const js = `
@@ -21,7 +21,8 @@ const hookLogger = (logItem) => {
     const newStateData = {
       queries: logItem.state.queries,
       mutations: logItem.state.mutations,
-      inspector: logItem.dataWithOptimisticResults
+      inspector: logItem.dataWithOptimisticResults,
+      network: logItem.network
     }
 
     try {
@@ -65,7 +66,7 @@ window.addEventListener('message', event => {
 
   if (event.data.APOLLO_CONNECTED) {
     if (!passedApolloConnected) {
-      chrome.runtime.sendMessage({ APOLLO_CONNECTED: true }, function () {
+      chrome.runtime.sendMessage({ APOLLO_CONNECTED: true }, function() {
         passedApolloConnected = true;
       });
     }
@@ -84,17 +85,17 @@ window.addEventListener('message', event => {
     if (contentScriptState.activeTab == 'queries') {
       chrome.runtime.sendMessage({
         type: 'UPDATE_TAB_DATA',
-        queries: event.data.newStateData.queries
+        queries: event.data.newStateData.queries,
       });
     } else if (contentScriptState.activeTab == 'mutations') {
       chrome.runtime.sendMessage({
         type: 'UPDATE_TAB_DATA',
-        mutations: event.data.newStateData.mutations
+        mutations: event.data.newStateData.mutations,
       });
     } else if (contentScriptState.activeTab == 'inspector') {
       chrome.runtime.sendMessage({
         type: 'UPDATE_TAB_DATA',
-        inspector: event.data.newStateData.inspector
+        inspector: event.data.newStateData.inspector,
       });
     }
   }
@@ -103,14 +104,14 @@ window.addEventListener('message', event => {
 });
 
 // send data to a tab only when a new tab is opened
-chrome.runtime.onMessage.addListener(function (request, sender) {
+chrome.runtime.onMessage.addListener(function(request, sender) {
   contentScriptState.activeTab = request.activeTab;
   let activeTab = contentScriptState.activeTab;
   let data = contentScriptState.data[activeTab];
 
   message = {
     type: 'UPDATE_TAB_DATA',
-    [activeTab]: data
+    [activeTab]: data,
   };
 
   // sends message with data back to background page
